@@ -1,0 +1,23 @@
+# Compiled files
+*.o
+*.out
+*.exe
+*.obj
+
+# Build output
+build/
+bin/
+
+# Debug / temporary files
+*.log
+*.tmp
+*.swp
+*~
+
+# IDE files
+.vscode/
+.idea/
+
+# OS-generated files
+.DS_Store
+Thumbs.db
