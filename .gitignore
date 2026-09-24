@@ -3,7 +3,7 @@
 *.out
 *.exe
 *.obj
-
+    
 # Build output
 build/
 bin/
