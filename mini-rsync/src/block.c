@@ -1,6 +1,7 @@
 #include "block.h"
 #include "file.h"
 
+
 size_t build_block_list(int fd,Block *blocks,size_t max_blocks){
     unsigned char buffer[BLOCK_SIZE];
     size_t block_count = 0;
@@ -16,6 +17,14 @@ size_t build_block_list(int fd,Block *blocks,size_t max_blocks){
         block_count++;
     }
     return block_count;
+}
+int find_matching_block(uint32_t checksum,const Block *blocks,size_t block_count){
+    for(size_t i = 0;i < block_count;i++){
+        if(blocks[i].checksum == checksum){
+            return (int)i;
+        }
+    }
+    return -1;
 }
 uint32_t calculate_checksum(const unsigned char *data,size_t size){
     uint32_t checksum = 0;

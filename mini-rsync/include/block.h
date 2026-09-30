@@ -14,4 +14,5 @@ typedef struct{
 uint32_t calculate_checksum(const unsigned char *data,size_t size);
 
 size_t build_block_list(int fd,Block *blocks,size_t max_blocks);
+int find_matching_block(uint32_t checksum,const Block *blocks,size_t block_count);
 #endif
