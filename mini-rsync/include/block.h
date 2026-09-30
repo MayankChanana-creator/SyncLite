@@ -13,4 +13,5 @@ typedef struct{
 } Block;
 uint32_t calculate_checksum(const unsigned char *data,size_t size);
 
+size_t build_block_list(int fd,Block *blocks,size_t max_blocks);
 #endif
