@@ -1,5 +1,6 @@
 #include "file.h"
 #include "block.h"
+#include "rolling_checksum.h"
 
 #include <stdio.h>
 
@@ -28,12 +29,28 @@ int main(int argc,char *argv[]){
         uint32_t checksum = calculate_checksum(buffer,bytes_read);
         int match = find_matching_block(checksum,destination_blocks,destination_count);
         if(match != -1){
-            printf("Source Block %zu -> MATCH -> Destination Block %d\n",source_index,match);
+            printf("Source Block %zu -> ALIGNED MATCH -> Destination Block %d\n",source_index,match);
         }
         else{
-            printf("Source Block %zu -> NO MATCH\n",source_index);
+            int destination_fd = open_for_read(argv[2]);
+            if(destination_fd == -1){
+                close_file(source_fd);
+                return 1;
+            }
+            int rolling_match = find_checksum_in_file(destination_fd,checksum,bytes_read);
+            close_file(destination_fd);
+            if(rolling_match != -1){
+                printf("Source Block %zu -> SHIFTED MATCH -> Destination Position %d\n",source_index,rolling_match);
+            }
+            else{
+                printf("Source Block %zu -> NO MATCH\n",source_index);
+            }
         }
         source_index++;
+    }
+    if(bytes_read == -1){
+        close_file(source_fd);
+        return 1;
     }
     close_file(source_fd);
     return 0;
