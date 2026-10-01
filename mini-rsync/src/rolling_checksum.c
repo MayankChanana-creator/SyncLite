@@ -2,6 +2,7 @@
 #include "file.h"
 #include <stdlib.h>
 #include <unistd.h>
+
 uint32_t rolling_checksum_initial(const unsigned char *data,size_t size){
     uint32_t sum = 0;
     for(size_t i = 0;i < size;i++){
@@ -79,4 +80,48 @@ int verify_block_at_position(int fd,const unsigned char *data,size_t size,size_t
     }
     free(buffer);
     return 1;
+}
+int find_verified_block_in_file(int fd,const unsigned char *data,size_t size){
+    if(size == 0){
+        return -1;
+    }
+    unsigned char *buffer = malloc(size);
+    if(buffer == NULL){
+        return -1;
+    }
+    ssize_t bytes_read = read_file(fd,buffer,size);
+    if(bytes_read != (ssize_t)size){
+        free(buffer);
+        return -1;
+    }
+    uint32_t target_checksum = rolling_checksum_initial(data,size);
+    uint32_t checksum = rolling_checksum_initial(buffer,size);
+    size_t position = 0;
+    while(1){
+        if(checksum == target_checksum){
+            int matches = 1;
+            for(size_t i = 0;i < size;i++){
+                size_t buffer_index = (position + i) % size;
+                if(buffer[buffer_index] != data[i]){
+                    matches = 0;
+                    break;
+                }
+            }
+            if(matches){
+                free(buffer);
+                return (int)position;
+            }
+        }
+        unsigned char incoming;
+        ssize_t result = read_file(fd,&incoming,1);
+        if(result <= 0){
+            break;
+        }
+        unsigned char outgoing = buffer[position % size];
+        checksum = rolling_checksum_next(checksum,outgoing,incoming);
+        buffer[position % size] = incoming;
+        position++;
+    }
+    free(buffer);
+    return -1;
 }
