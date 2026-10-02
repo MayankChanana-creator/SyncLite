@@ -2,6 +2,7 @@
 #include "file.h"
 #include <stdio.h>
 
+
 int main(void){
     SyncOperation copy = create_copy_operation(2, 4);
 
@@ -123,14 +124,39 @@ int main(void){
             return 1;
         }
     }
-    for(size_t i = 0; i < shifted_count; i++)
-    {
-        free_operation(&shifted_operations[i]);
-    }
+    
 
     printf("PASS: sync operation application\n");
 
     printf("PASS: sync operation tests\n");
+    
+    SyncStats stats;
 
+    calculate_sync_stats(shifted_operations,shifted_count,&stats);
+
+    if(stats.operation_count != shifted_count){
+        printf("FAIL: statistics operation count\n");
+        return 1;
+    }
+
+    if(stats.bytes_copied != 6){
+        printf("FAIL: statistics copied bytes\n");
+        return 1;
+    }
+
+    if(stats.bytes_inserted != 0){
+        printf("FAIL: statistics inserted bytes\n");
+        return 1;
+    }
+
+    if(stats.bytes_transferred != 0){
+        printf("FAIL: statistics transferred bytes\n");
+        return 1;
+    }
+
+    printf("PASS: synchronization statistics\n");
+    for(size_t i = 0; i < shifted_count; i++){
+        free_operation(&shifted_operations[i]);
+    }
     return 0;
 }

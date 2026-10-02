@@ -150,3 +150,22 @@ int apply_sync_operations(int destination_fd,int output_fd,const SyncOperation *
 
     return 0;
 }
+
+void calculate_sync_stats(const SyncOperation *operations,size_t operation_count,SyncStats *stats){
+    if(stats == NULL){
+        return;
+    }
+    stats->operation_count = operation_count;
+    stats->bytes_copied = 0;
+    stats->bytes_inserted = 0;
+    stats->bytes_transferred = 0;
+    for(size_t i = 0;i < operation_count;i++){
+        if(operations[i].type == OP_COPY){
+            stats->bytes_copied += operations[i].size;
+        }
+        else if(operations[i].type == OP_INSERT){
+            stats->bytes_inserted += operations[i].size;
+            stats->bytes_transferred += operations[i].size;
+        }
+    }
+}

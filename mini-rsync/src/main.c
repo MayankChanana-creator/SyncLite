@@ -89,8 +89,20 @@ int main(int argc, char *argv[]){
     SyncOperation operations[MAX_OPERATIONS];
 
     size_t operation_count = build_sync_operations(source,source_size,destination,destination_size,operations,MAX_OPERATIONS);
+    SyncStats stats;
+    calculate_sync_stats(operations,operation_count,&stats);
 
     printf("Generated %zu synchronization operations\n",operation_count);
+
+    printf("\n");
+    printf("Synchronization Statistics\n");
+    printf("---------------------------\n");
+    printf("Source size       : %zu bytes\n", source_size);
+    printf("Destination size  : %zu bytes\n", destination_size);
+    printf("Operations        : %zu\n", stats.operation_count);
+    printf("Bytes copied      : %zu\n", stats.bytes_copied);
+    printf("Bytes inserted    : %zu\n", stats.bytes_inserted);
+    printf("Bytes transferred : %zu\n", stats.bytes_transferred);
 
     int destination_fd = open_for_read(argv[2]);
 
