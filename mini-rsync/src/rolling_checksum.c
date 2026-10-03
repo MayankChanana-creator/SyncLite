@@ -3,6 +3,13 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+
+/*
+ * Calculate the checksum of the first window.
+ *
+ * The checksum is the sum of all bytes in the window.
+ */
+
 uint32_t rolling_checksum_initial(const unsigned char *data,size_t size){
     uint32_t sum = 0;
     for(size_t i = 0;i < size;i++){
@@ -11,9 +18,26 @@ uint32_t rolling_checksum_initial(const unsigned char *data,size_t size){
     return sum;
 }
 
+
+/*
+ * Update the checksum when the window moves by one byte.
+ *
+ * Instead of recalculating the entire window:
+ *
+ *     previous checksum
+ *     - outgoing byte
+ *     + incoming byte
+ *
+ * This makes scanning cheaper.
+ */
+
 uint32_t rolling_checksum_next(uint32_t previous,unsigned char outgoing,unsigned char incoming){
     return previous - outgoing + incoming;
 }
+
+/*
+* Searches a file using the rolling checksum()
+*/
 int find_checksum_in_file(int fd,uint32_t target,size_t window_size){
     if(window_size == 0){
         return -1;
@@ -46,6 +70,10 @@ int find_checksum_in_file(int fd,uint32_t target,size_t window_size){
     free(buffer);
     return -1;
 }
+
+/*
+* Searches for a matching block
+*/
 int find_matching_block_in_file(int fd,const Block *blocks,size_t block_count,size_t window_size){
     for(size_t i = 0;i < block_count;i++){
         if(lseek(fd,0,SEEK_SET) == -1){
@@ -58,6 +86,10 @@ int find_matching_block_in_file(int fd,const Block *blocks,size_t block_count,si
     }
     return -1;
 }
+
+/*
+* Compare actual bytes to protect against checksum collisions
+*/
 
 int verify_block_at_position(int fd,const unsigned char *data,size_t size,size_t position){
     if(lseek(fd,(off_t)position,SEEK_SET) == -1){
@@ -81,6 +113,11 @@ int verify_block_at_position(int fd,const unsigned char *data,size_t size,size_t
     free(buffer);
     return 1;
 }
+
+/*
+* Combines rolling search + byte verification
+*/
+
 int find_verified_block_in_file(int fd,const unsigned char *data,size_t size){
     if(size == 0){
         return -1;

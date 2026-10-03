@@ -63,6 +63,37 @@ static unsigned char *read_entire_file(const char *path,size_t *file_size){
     return buffer;
 }
 
+
+/*
+
+ * RSync Algorithm 
+ * 1. Read source and destination into memory.
+ */
+
+/*
+ * 2. Build the synchronization operation list.
+ */
+
+/*
+ * 3. Calculate and display synchronization statistics.
+ */
+
+/*
+ * 4. Apply operations to a temporary output file.
+ */
+
+/*
+ * 5. Replace the destination using rename().
+ *
+ * This prevents partially written synchronization
+ * output from becoming the destination file.
+ */
+
+/*
+ * 6. Release allocated memory.
+ */
+
+
 int main(int argc, char *argv[]){
     if(argc != 3){
         printf("Usage: %s <source> <destination>\n",argv[0]);

@@ -6,6 +6,14 @@
 #include <unistd.h>
 
 
+/*
+ * Create an operation that copies bytes from an
+ * existing position in the destination file.
+ *
+ * No memory is allocated because the data already
+ * exists in the destination.
+ */
+
 SyncOperation create_copy_operation(size_t position,size_t size){
     SyncOperation operation;
     operation.type = OP_COPY;
@@ -14,6 +22,14 @@ SyncOperation create_copy_operation(size_t position,size_t size){
     operation.data = NULL;
     return operation;
 }
+
+/*
+ * Create an operation that inserts new bytes.
+ *
+ * The data is copied into dynamically allocated
+ * memory because it must remain available until
+ * synchronization is applied.
+ */
 
 
 SyncOperation create_insert_operation(const unsigned char *data,size_t size){
@@ -34,6 +50,11 @@ SyncOperation create_insert_operation(const unsigned char *data,size_t size){
     return operation;
 }
 
+/*
+ * Release memory owned by an INSERT operation.
+ *
+ * COPY operations have data == NULL, so free(NULL) is safe.
+ */
 
 void free_operation(SyncOperation *operation){
     if(operation == NULL){
@@ -44,6 +65,18 @@ void free_operation(SyncOperation *operation){
     operation->data = NULL;
     operation->size = 0;
 }
+
+/*
+ * Search the destination for a source block.
+ *
+ * The search uses two stages:
+ *
+ * 1. Compare rolling checksums.
+ * 2. If the checksum matches, compare every byte.
+ *
+ * The second step is necessary because different
+ * byte sequences can produce the same checksum.
+ */
 
 static int find_block_in_destination(const unsigned char *source,size_t source_size,const unsigned char *destination,size_t destination_size){
     if(source_size == 0 || destination_size < source_size){
@@ -78,6 +111,21 @@ static int find_block_in_destination(const unsigned char *source,size_t source_s
 }
 
 
+/*
+ * Build the synchronization plan.
+ *
+ * The source is processed in fixed-size blocks.
+ *
+ * For every source block:
+ *
+ *     matching destination block -> COPY
+ *
+ *     no matching block -> INSERT
+ *
+ * The resulting operations are later applied to
+ * produce the synchronized destination.
+ */
+
 size_t build_sync_operations(const unsigned char *source,size_t source_size,const unsigned char *destination,size_t destination_size,SyncOperation *operations,size_t max_operations){
     size_t operation_count = 0;
     size_t source_position = 0;
@@ -104,6 +152,22 @@ size_t build_sync_operations(const unsigned char *source,size_t source_size,cons
 
     return operation_count;
 }
+
+/*
+ * Apply the synchronization plan.
+ *
+ * COPY:
+ *     Read bytes from the existing destination
+ *     at the specified position.
+ *
+ * INSERT:
+ *     Write the stored new bytes directly.
+ *
+ * The output is written to a separate file rather
+ * than modifying the destination in place.
+ */
+
+
 int apply_sync_operations(int destination_fd,int output_fd,const SyncOperation *operations,size_t operation_count){
     unsigned char buffer[BLOCK_SIZE];
 
@@ -151,6 +215,20 @@ int apply_sync_operations(int destination_fd,int output_fd,const SyncOperation *
     return 0;
 }
 
+/*
+ * Calculate statistics for the synchronization plan.
+ *
+ * Bytes copied represent data reused from the
+ * destination.
+ *
+ * Bytes inserted represent new data that must be
+ * transferred.
+ *
+ * Bytes transferred therefore counts only INSERT
+ * data in the current implementation.
+ */
+
+ 
 void calculate_sync_stats(const SyncOperation *operations,size_t operation_count,SyncStats *stats){
     if(stats == NULL){
         return;
