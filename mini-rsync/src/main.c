@@ -12,7 +12,7 @@
 static unsigned char *read_entire_file(const char *path,size_t *file_size){
     int fd = open_for_read(path);
 
-    if (fd == -1){
+    if(fd == -1){
         return NULL;
     }
 
@@ -64,18 +64,20 @@ static unsigned char *read_entire_file(const char *path,size_t *file_size){
 }
 
 int main(int argc, char *argv[]){
-    if (argc != 3){
+    if(argc != 3){
         printf("Usage: %s <source> <destination>\n",argv[0]);
         return 1;
     }
+
     size_t source_size = 0;
 
     unsigned char *source = read_entire_file(argv[1],&source_size);
 
-    if (source == NULL){
+    if(source == NULL){
         fprintf(stderr,"Failed to read source file\n");
         return 1;
     }
+
     size_t destination_size = 0;
 
     unsigned char *destination = read_entire_file(argv[2],&destination_size);
@@ -89,20 +91,31 @@ int main(int argc, char *argv[]){
     SyncOperation operations[MAX_OPERATIONS];
 
     size_t operation_count = build_sync_operations(source,source_size,destination,destination_size,operations,MAX_OPERATIONS);
+
     SyncStats stats;
+
     calculate_sync_stats(operations,operation_count,&stats);
 
     printf("Generated %zu synchronization operations\n",operation_count);
 
     printf("\n");
+
     printf("Synchronization Statistics\n");
+
     printf("---------------------------\n");
-    printf("Source size       : %zu bytes\n", source_size);
-    printf("Destination size  : %zu bytes\n", destination_size);
-    printf("Operations        : %zu\n", stats.operation_count);
-    printf("Bytes copied      : %zu\n", stats.bytes_copied);
-    printf("Bytes inserted    : %zu\n", stats.bytes_inserted);
-    printf("Bytes transferred : %zu\n", stats.bytes_transferred);
+
+    printf("Source size       : %zu bytes\n",source_size);
+
+    printf("Destination size  : %zu bytes\n",destination_size);
+
+    printf("Operations        : %zu\n",stats.operation_count);
+
+    printf("Bytes copied      : %zu\n",stats.bytes_copied);
+
+    printf("Bytes inserted    : %zu\n",stats.bytes_inserted);
+
+    printf("Bytes transferred : %zu\n",stats.bytes_transferred);
+
 
     int destination_fd = open_for_read(argv[2]);
 
@@ -117,109 +130,42 @@ int main(int argc, char *argv[]){
 
     if(output_fd == -1){
         close_file(destination_fd);
-
         free(source);
         free(destination);
-
         return 1;
     }
 
     int result = apply_sync_operations(destination_fd,output_fd,operations,operation_count);
-
     close_file(destination_fd);
     close_file(output_fd);
-
+    
     if(result != 0){
         fprintf(stderr,"Failed to apply synchronization operations\n");
-
+        remove("sync_output.tmp");
         for(size_t i = 0;i < operation_count;i++){
             free_operation(&operations[i]);
         }
-
         free(source);
         free(destination);
-
         return 1;
     }
 
-    int new_destination_fd = open_for_read("sync_output.tmp");
-
-    if(new_destination_fd == -1){
+    if(rename("sync_output.tmp", argv[2]) != 0){
+        fprintf(stderr,"Error: Failed to replace destination file\n");
+        remove("sync_output.tmp");
         for(size_t i = 0;i < operation_count;i++){
             free_operation(&operations[i]);
         }
-
         free(source);
         free(destination);
-
         return 1;
     }
-
-    int final_destination_fd = open_for_write(argv[2]);
-
-    if(final_destination_fd == -1){
-        close_file(new_destination_fd);
-
-        for(size_t i = 0;i < operation_count;i++){
-            free_operation(&operations[i]);
-        }
-
-        free(source);
-        free(destination);
-
-        return 1;
-    }
-
-    unsigned char buffer[4096];
-
-    while(1){
-        ssize_t bytes_read = read_file(new_destination_fd,buffer,sizeof(buffer));
-
-        if(bytes_read < 0){
-            close_file(new_destination_fd);
-            close_file(final_destination_fd);
-
-            for(size_t i = 0;i < operation_count;i++){
-                free_operation(&operations[i]);
-            }
-
-            free(source);
-            free(destination);
-
-            return 1;
-        }
-
-        if(bytes_read == 0){
-            break;
-        }
-
-        ssize_t bytes_written = write_file(final_destination_fd,buffer,(size_t)bytes_read);
-
-        if(bytes_written != bytes_read){
-            close_file(new_destination_fd);
-            close_file(final_destination_fd);
-
-            for(size_t i = 0;i < operation_count;i++){
-                free_operation(&operations[i]);
-            }
-
-            free(source);
-            free(destination);
-
-            return 1;
-        }
-    }
-
-    close_file(new_destination_fd);
-    close_file(final_destination_fd);
 
     for(size_t i = 0;i < operation_count;i++){
         free_operation(&operations[i]);
     }
-
     free(source);
     free(destination);
-
     printf("Synchronization completed\n");
 
     return 0;
